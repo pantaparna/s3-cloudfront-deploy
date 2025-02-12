@@ -34,5 +34,5 @@ jobs:
             '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
           )
           aws cloudfront create-invalidation \
-            --distribution-id "E1RJ4AXYW5WTPO" \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --invalidation-batch "$INVALIDATION_BATCH"

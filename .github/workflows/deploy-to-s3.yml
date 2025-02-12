@@ -26,7 +26,14 @@ jobs:
       - name: Upload Files to S3
         run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
-      - name: Invalidate CloudFront Cache
+      - name: Debug - Check Distribution ID and Region
+        run: |
+          echo "Attempting to describe distribution with ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          aws cloudfront get-distribution --id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+        continue-on-error: true
+
+      - name: Invalidate CloudFront Cache (if previous step succeeded)
+        if: success()  # Only run if the previous step (get-distribution) succeeds
         run: |
           INVALIDATION_BATCH=$(jq -n \
             --arg paths '/*' \

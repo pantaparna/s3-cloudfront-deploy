@@ -18,7 +18,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2  # Change if needed
+          aws-region: us-east-2  # Your region
+
+      - name: Verify AWS Credentials
+        run: |
+          aws sts get-caller-identity
+          # This will return your IAM identity if the credentials are correct
 
       - name: Upload Files to S3
         run: |

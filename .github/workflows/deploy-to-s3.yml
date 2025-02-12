@@ -26,14 +26,52 @@ jobs:
       - name: Upload Files to S3
         run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
+      - name: Debug - Check Secret Value
+        run: |
+          echo "CloudFront Distribution ID (from secret): ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          if [ -z "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID secret is empty!"
+            exit 1
+          fi
+          if [[ "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" == *" "* ]]; then
+            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID secret contains whitespace!"
+            exit 1
+          fi
+
+      - name: Debug - Construct Invalidation Batch and Echo
+        run: |
+          INVALIDATION_BATCH=$(jq -n \
+            --arg paths '/*' \
+            --arg callerRef "$(date +%s)" \
+            '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
+          )
+          echo "Generated Invalidation Batch:"
+          echo "$INVALIDATION_BATCH"
+
+
       - name: Invalidate CloudFront Cache
         run: |
+          INVALIDATION_BATCH=$(jq -n \
+            --arg paths '/*' \
+            --arg callerRef "$(date +%s)" \
+            '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
+          )
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --invalidation-batch "{
-              \"Paths\": {
-                \"Quantity\": 1,
-                \"Items\": [\"/*\"]
-              },
-              \"CallerReference\": \"$(date +%s)\"
-            }"
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --invalidation-batch "$INVALIDATION_BATCH"  2>&1 | tee output.log
+          echo "---------------"
+          echo "Contents of output.log:"
+          cat output.log
+        continue-on-error: true
+
+
+      - name: Check AWS CLI Version
+        run: aws --version
+
+      - name: Upload output.log (if it exists)
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cloudfront-output
+          path: output.log
+          if-no-files-found: warn

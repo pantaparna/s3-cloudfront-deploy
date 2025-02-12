@@ -10,68 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Step 2: Configure AWS Credentials using GitHub Secrets
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4  # Use v4 for latest updates
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+          aws-region: us-east-2  # Ensure this is your region
 
+      # Step 3: Verify if the AWS credentials are loaded (Good practice)
       - name: Verify AWS Credentials
-        run: aws sts get-caller-identity
+        run: |
+          aws sts get-caller-identity
 
+      # Step 4: Upload files to S3
       - name: Upload Files to S3
-        run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
-
-      - name: Debug - Check Secret Value
         run: |
-          echo "CloudFront Distribution ID (from secret): ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
-          if [ -z "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
-            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID secret is empty!"
-            exit 1
-          fi
-          if [[ "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" == *" "* ]]; then
-            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID secret contains whitespace!"
-            exit 1
-          fi
+          aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
-      - name: Debug - Construct Invalidation Batch and Echo
-        run: |
-          INVALIDATION_BATCH=$(jq -n \
-            --arg paths '/*' \
-            --arg callerRef "$(date +%s)" \
-            '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
-          )
-          echo "Generated Invalidation Batch:"
-          echo "$INVALIDATION_BATCH"
-
+      # Step 5: Invalidate CloudFront Cache
       - name: Invalidate CloudFront Cache
         run: |
-          INVALIDATION_BATCH=$(jq -n \
-            --arg paths '/*' \
-            --arg callerRef "$(date +%s)" \
-            '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
-          )
-          echo "Sending Invalidation Request..."
           aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --invalidation-batch "$INVALIDATION_BATCH"  2>&1 | tee output.log
-          echo "---------------"
-          echo "Contents of output.log:"
-          cat output.log
-        continue-on-error: true
-
-      - name: Check AWS CLI Version
-        run: aws --version
-
-      - name: Upload output.log (if it exists)
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: cloudfront-output
-          path: output.log
-          if-no-files-found: warn
-
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --invalidation-batch '{
+              "Paths": {
+                "Quantity": 1,
+                "Items": ["/*"]
+              },
+              "CallerReference": "'$(date +%s)'"
+            }'

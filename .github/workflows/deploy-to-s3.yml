@@ -48,7 +48,6 @@ jobs:
           echo "Generated Invalidation Batch:"
           echo "$INVALIDATION_BATCH"
 
-
       - name: Invalidate CloudFront Cache
         run: |
           INVALIDATION_BATCH=$(jq -n \
@@ -56,6 +55,7 @@ jobs:
             --arg callerRef "$(date +%s)" \
             '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
           )
+          echo "Sending Invalidation Request..."
           aws cloudfront create-invalidation \
             --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --invalidation-batch "$INVALIDATION_BATCH"  2>&1 | tee output.log
@@ -64,14 +64,14 @@ jobs:
           cat output.log
         continue-on-error: true
 
-
       - name: Check AWS CLI Version
         run: aws --version
 
       - name: Upload output.log (if it exists)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         if: always()
         with:
           name: cloudfront-output
           path: output.log
           if-no-files-found: warn
+

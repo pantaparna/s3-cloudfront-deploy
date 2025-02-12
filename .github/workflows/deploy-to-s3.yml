@@ -26,7 +26,13 @@ jobs:
       - name: Upload Files to S3
         run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
-      - name: Invalidate CloudFront Cache
+      - name: Hexdump the Secret Value
+        run: |
+          echo "Secret Value (Raw): ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          echo "Secret Value (Hexdump):"
+          echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" | hexdump -C
+
+      - name: Invalidate CloudFront Cache (using secret)
         run: |
           INVALIDATION_BATCH=$(jq -n \
             --arg paths '/*' \
@@ -36,3 +42,4 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --invalidation-batch "$INVALIDATION_BATCH"
+        continue-on-error: true # Keep going even if this fails

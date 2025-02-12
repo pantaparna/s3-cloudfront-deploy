@@ -10,37 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS Credentials using GitHub Secrets
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4  # Use v4 for latest updates
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2  # Ensure this is your region
+          aws-region: us-east-2
 
-      # Step 3: Verify if the AWS credentials are loaded (Good practice)
       - name: Verify AWS Credentials
-        run: |
-          aws sts get-caller-identity
+        run: aws sts get-caller-identity
 
-      # Step 4: Upload files to S3
       - name: Upload Files to S3
-        run: |
-          aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
+        run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
-      # Step 5: Invalidate CloudFront Cache
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --invalidation-batch '{
-              "Paths": {
-                "Quantity": 1,
-                "Items": ["/*"]
+            --invalidation-batch "{
+              \"Paths\": {
+                \"Quantity\": 1,
+                \"Items\": [\"/*\"]
               },
-              "CallerReference": "'$(date +%s)'"
-            }'
+              \"CallerReference\": \"$(date +%s)\"
+            }"

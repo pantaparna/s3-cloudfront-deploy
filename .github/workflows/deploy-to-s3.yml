@@ -10,25 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Step 2: Configure AWS Credentials using GitHub Secrets
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2  # Your region
+          aws-region: us-east-2  # Ensure this is your region
 
+      # Step 3: Verify if the AWS credentials are loaded
       - name: Verify AWS Credentials
         run: |
           aws sts get-caller-identity
-          # This will return your IAM identity if the credentials are correct
 
+      # Step 4: Upload files to S3
       - name: Upload Files to S3
         run: |
           aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive --acl public-read
 
+      # Step 5: Invalidate CloudFront Cache
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"

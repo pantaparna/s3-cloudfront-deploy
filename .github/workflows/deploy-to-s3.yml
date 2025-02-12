@@ -16,13 +16,13 @@ jobs:
 
       # Step 2: Configure AWS Credentials using GitHub Secrets
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4  # Use v4 for latest updates
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2  # Ensure this is your region
 
-      # Step 3: Verify if the AWS credentials are loaded
+      # Step 3: Verify if the AWS credentials are loaded (Good practice)
       - name: Verify AWS Credentials
         run: |
           aws sts get-caller-identity
@@ -37,4 +37,10 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
+            --invalidation-batch '{
+              "Paths": {
+                "Quantity": 1,
+                "Items": ["/*"]
+              },
+              "CallerReference": "'$(date +%s)'"
+            }'

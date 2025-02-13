@@ -13,6 +13,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Build Artifacts (Example - replace with your actual build)
+        run: |
+          mkdir -p build
+          echo "Hello, S3!" > build/index.html
+          # Add your actual build commands here
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -26,20 +32,22 @@ jobs:
       - name: Upload Files to S3
         run: aws s3 cp build/ s3://aparna-github-actions-test-bucket/deployments/ --recursive
 
-      - name: Hexdump the Secret Value
-        run: |
-          echo "Secret Value (Raw): ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
-          echo "Secret Value (Hexdump):"
-          echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" | hexdump -C
-
       - name: Invalidate CloudFront Cache (using secret)
         run: |
           INVALIDATION_BATCH=$(jq -n \
-            --arg paths '/*' \
+            --arg paths '/deployments/index.html' \  # Invalidate only the changed file!
             --arg callerRef "$(date +%s)" \
             '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}'
           )
           aws cloudfront create-invalidation \
             --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --invalidation-batch "$INVALIDATION_BATCH"
-        continue-on-error: true # Keep going even if this fails
+        continue-on-error: true # Keep going, but log the error
+
+      - name: Check CloudFront Invalidation Status and Notify
+        if: failure()  # Only run if the previous step failed
+        run: |
+          echo "CloudFront invalidation failed!"
+          # Add a notification mechanism here (e.g., Slack, email)
+          # Example using a simple echo (replace with your notification method):
+          echo "::warning:: CloudFront invalidation failed. Check workflow logs."

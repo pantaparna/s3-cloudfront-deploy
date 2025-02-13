@@ -31,19 +31,10 @@ jobs:
 
       - name: Invalidate CloudFront Cache
         run: |
-          INVALIDATION_BATCH=$(jq -n \
-            --arg paths '/deployments/index.html' \
-            --arg callerRef "$(date +%s)" \
-            '{Paths: {Quantity: 1, Items: [$paths]}, CallerReference: $callerRef}' \
-          )
           aws cloudfront create-invalidation \
             --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --invalidation-batch "$INVALIDATION_BATCH"
+            --paths "/deployments/*"
         continue-on-error: true
-
-      - name: Check CloudFront Invalidation and Notify on Failure
-        if: failure()  # Runs if the *previous* step (invalidation) failed.
-        run: |
-          echo "CloudFront invalidation failed!"
-          echo "::warning:: CloudFront invalidation failed. Check workflow logs."
-          #  Replace with a more robust notification (e.g., Slack, email).
+        env:
+          AWS_DEFAULT_REGION: us-east-2
+                

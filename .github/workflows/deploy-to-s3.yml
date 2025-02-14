@@ -3,7 +3,7 @@ name: Deploy to S3 and Invalidate CloudFront
 on:
   push:
     branches:
-      - main
+      - tset2
 
 jobs:
   deploy:
@@ -29,12 +29,5 @@ jobs:
         # IMPORTANT:  Double-check that 'build/' is the correct path *within your repository*
         #             to the files you want to upload.
 
-      - name: Invalidate CloudFront Cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --paths "/deployments/*"
-        continue-on-error: true
-        env:
-          AWS_DEFAULT_REGION: us-east-2
+      
                 
